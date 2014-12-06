@@ -10,11 +10,10 @@ db = connection.shirts
 def hello():
     return "Please specify a specific route!"
 
-#MongoDB part
 @route('/shirt/:shirtId')
 def singleShirt(shirtId):
 	entity = db['shirts'].find_one({'shirtId':shirtId})
-	entity.pop('_id', None) #omit the mongoDB BSON document key
+	entity.pop('_id', None)
 	if not entity:
 		abort(404, 'No shirt with id %s' % shirtId)
 	return entity
@@ -61,7 +60,7 @@ def deleteShirt():
 	db['shirts'].remove({'shirtId':entity.get('shirtId')})
 	return data
 
-#MySQL database part
+
 @route('/shoe/:shoeId')
 def singleShirt(shoeId):
     return "get single shoe"+shoeId;
