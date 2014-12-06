@@ -1,21 +1,24 @@
 import json
 import bottle
-from bottle import route, run, request, abort
+from bottle import route, run, request, abort, install
 from pymongo import Connection
+import bottle_mysql
+
 
 connection = Connection('localhost',27017)
-db = connection.shirts
-
+mongo = connection.shirts
 @route('/')
 def hello():
     return "Please specify a specific route!"
 
+#mongoDB
 @route('/shirt/:shirtId')
 def singleShirt(shirtId):
-	entity = db['shirts'].find_one({'shirtId':shirtId})
-	entity.pop('_id', None)
+	entity = mongo['shirts'].find_one({'shirtId':shirtId})
+
 	if not entity:
 		abort(404, 'No shirt with id %s' % shirtId)
+	entity.pop('_id', None)
 	return entity
 
 @route('/shirts', method = 'PUT')
@@ -27,9 +30,12 @@ def updateShirt():
 	entity = json.loads(data)
 	if not entity.has_key('shirtId'):
 		abort(400, 'No shirtId specified')
-		return data
 	
-	db['shirts'].update({'shirtId':entity.get('shirtId')},{"$set": entity},upsert=False)
+	existed = mongo['shirts'].find_one({'shirtId':entity.get('shirtId')})
+	if not existed:
+		abort(404, 'This shirt is not existed')
+
+	mongo['shirts'].update({'shirtId':entity.get('shirtId')},{"$set": entity},upsert=False)
 	return entity
 
 
@@ -43,7 +49,11 @@ def addShirt():
 	if not entity.has_key('shirtId'):
 		abort(400, 'No shirtId specified')
 
-	db['shirts'].save(entity)
+	existed = mongo['shirts'].find_one({'shirtId':entity.get('shirtId')})
+	if existed:
+		abort(409, 'This shirt is existed')
+
+	mongo['shirts'].save(entity)
 	return data
 
 
@@ -57,25 +67,77 @@ def deleteShirt():
 	if not entity.has_key('shirtId'):
 		abort(400, 'No shirtId specified')
 
-	db['shirts'].remove({'shirtId':entity.get('shirtId')})
-	return data
+	existed = mongo['shirts'].find_one({'shirtId':entity.get('shirtId')})
+	if not existed:
+		abort(404, 'This shirt is not existed')
+		
+	mongo['shirts'].remove({'shirtId':entity.get('shirtId')})
 
 
+#Mysql database
+plugin = bottle_mysql.Plugin(dbuser='root', dbpass='root', dbname='assignment3')
+install(plugin)
 @route('/shoe/:shoeId')
-def singleShirt(shoeId):
-    return "get single shoe"+shoeId;
+def singleShoe(shoeId,db):
+	db.execute('SELECT * from shoes where shoe_id="%s"', (int(shoeId),))
+	row = db.fetchone()
+	if not row:
+		abort(404, 'No shoe is found')
+
+	return row
+
 
 @route('/shoes', method = 'PUT')
-def updateShirt():
-    return "update shoe"
+def updateShoe(db):
+	data = request.body.read()
+	if not data:
+		abort(400, 'No data received')
 
+	entity = json.loads(data)
+	if not entity.has_key('shoeId'):
+		abort(400, 'No shoeId specified')
+
+	db.execute('SELECT * from shoes where shoe_id="%s"', (int(entity.get('shoeId')),))
+	row = db.fetchone()
+	if not row:
+		abort(404, 'No shoe is found')
+
+	db.execute('UPDATE shoes SET shoe_name=%s, shoe_quantity=%s, created_by=%s WHERE shoe_id=%s', (entity.get('shoeName'),int(entity.get('shoeQuantity')),entity.get('createdBy'),int(entity.get('shoeId'))),)
+
+	return data;
 @route('/shoes', method = 'POST')
-def addShirt():
-    return "add shoe"
+def addShoe(db):
+	data = request.body.read()
+	if not data:
+		abort(400, 'No data received')
+
+	entity = json.loads(data)
+	if not entity.has_key('shoeId'):
+		abort(400, 'No shoeId specified')
+
+	db.execute('SELECT * from shoes where shoe_id="%s"', (int(entity.get('shoeId')),))
+	row = db.fetchone()
+	if row:
+		abort(409, 'This shoe is already existed')
+
+	db.execute("INSERT INTO shoes(shoe_id, shoe_name, shoe_quantity, created_by) VALUES (%s, %s, %s, %s)",(int(entity.get('shoeId')),entity.get('shoeName'),int(entity.get('shoeQuantity')),entity.get('createdBy')))
+	return data;
 
 @route('/shoes', method = 'DELETE')
-def deleteShirt():
-    return "delete shoe"
+def deleteShoe(db):
+	data = request.body.read()
+	if not data:
+		abort(400, 'No data received')
+
+	entity = json.loads(data)
+	if not entity.has_key('shoeId'):
+		abort(400, 'No shoeId specified')
+
+	db.execute('SELECT * from shoes where shoe_id="%s"', (int(entity.get('shoeId')),))
+	row = db.fetchone()
+	if not row:
+		abort(404, 'No shoe is found')
+	db.execute('DELETE FROM shoes WHERE shoe_id="%s"',(int(entity.get('shoeId')),))
 
 
 run(host='localhost', port=8080, debug=True)
