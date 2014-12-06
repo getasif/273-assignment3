@@ -1,3 +1,4 @@
+from bottledaemon import daemon_run
 import json
 import bottle
 from bottle import route, run, request, abort, install
@@ -140,4 +141,5 @@ def deleteShoe(db):
 	db.execute('DELETE FROM shoes WHERE shoe_id="%s"',(int(entity.get('shoeId')),))
 
 
-run(host='0.0.0.0', port=8080, debug=True)
+if __name__ == "__main__":
+  daemon_run()
