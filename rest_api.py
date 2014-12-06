@@ -140,4 +140,4 @@ def deleteShoe(db):
 	db.execute('DELETE FROM shoes WHERE shoe_id="%s"',(int(entity.get('shoeId')),))
 
 
-run(host='0.0.0.0', port=8080, debug=True)
+run(server='cherrypy', host='0.0.0.0', port=8080)
