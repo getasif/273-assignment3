@@ -70,7 +70,7 @@ def deleteShirt():
 	existed = mongo['shirts'].find_one({'shirtId':entity.get('shirtId')})
 	if not existed:
 		abort(404, 'This shirt is not existed')
-		
+
 	mongo['shirts'].remove({'shirtId':entity.get('shirtId')})
 
 
@@ -140,4 +140,4 @@ def deleteShoe(db):
 	db.execute('DELETE FROM shoes WHERE shoe_id="%s"',(int(entity.get('shoeId')),))
 
 
-run(host='localhost', port=8080, debug=True)
+run(host='0.0.0.0', port=8080, debug=True)
